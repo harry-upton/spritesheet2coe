@@ -10,7 +10,7 @@ def main(args):
     file_type = bmp.read(2).decode()
     file_size = struct.unpack('I', bmp.read(4))
     bmp.read(4) # Read 4 reserved bytes
-    offset = struct.unpack('I', bmp.read(4))
+    offset = struct.unpack('I', bmp.read(4))[0]
 
     if file_type != "BM":
         raise TypeError("Incorrect file format (header filetype not BM)")
@@ -37,7 +37,7 @@ def main(args):
     sprites_y = math.floor(image_height / sprite_size)
 
     if args.verbose:
-        print(f"Spritesheet dimensions in number of sprites {sprites_x}x{sprites_y}")
+        print(f"Spritesheet dimensions: {sprites_x} sprites by {sprites_y} sprites. ({sprites_x}x{sprites_y})")
     
     # Check image type, print if verbosity enabled
     num_colours = 0
@@ -63,6 +63,18 @@ def main(args):
     if compression != 0:
         raise Exception('Image must be uncompressed (compression = 0)')
     
+    # Open palette .coe file
+    palette_coe_file = None
+    if args.palette_coe != None:
+        palette_coe_file = open(args.palette_coe, 'w')
+        palette_coe_file.write("memory_initialization_radix=16;\nmemory_initialization_vector=")
+
+    # Open palette verilog switch-case file
+    palette_switch_file = None
+    if args.palette_switch != None:
+        palette_switch_file = open(args.palette_switch, 'w')
+        palette_switch_file.write("testheader\n")
+
     # Load Colour Table (if applicable)
     if num_colours == 16 or num_colours == 256:
         bmp.seek(dib_header_size + 14) # Start of colour table is file header size + info header size
@@ -83,17 +95,27 @@ def main(args):
                 print("%s \n %s \n %s \n %s" % (hex(blue), hex(green), hex(red), hex(unused)))
             
             # Write palette to files
-            if args.palette_coe != None:
-                continue
+            if palette_coe_file != None:
+                palette_coe_file.write(format(red,'x'))
+                palette_coe_file.write(format(green,'x'))
+                palette_coe_file.write(format(blue,'x'))
+                palette_coe_file.write(" ")
 
-            if args.palette_switch != None:
-                continue
+            if palette_switch_file != None:
+                palette_switch_file.write("testline\n")
 
+    # Close palette files
+    if palette_coe_file != None:
+        palette_coe_file.close()
+
+    if palette_switch_file != None:
+        palette_switch_file.close()
 
     # Load pixel data
     bmp.seek(offset)
 
     # Write to .coe file(s)
+
 
         
 
