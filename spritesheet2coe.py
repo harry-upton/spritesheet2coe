@@ -3,6 +3,10 @@ import argparse
 import math
 
 def main(args):
+    # Commandline optional args default values
+    if args.colour_depth == None:
+        args.colour_depth = 12
+
     # Open File
     bmp = open(args.input, 'rb')
 
@@ -73,7 +77,6 @@ def main(args):
     palette_switch_file = None
     if args.palette_switch != None:
         palette_switch_file = open(args.palette_switch, 'w')
-        palette_switch_file.write("testheader\n")
 
     # Load Colour Table (if applicable)
     if num_colours == 16 or num_colours == 256:
@@ -102,7 +105,12 @@ def main(args):
                 palette_coe_file.write(" ")
 
             if palette_switch_file != None:
-                palette_switch_file.write("testline\n")
+                bits_per_component = int(args.colour_depth/3)
+                palette_switch_file.write(f"{bits_per_pixel}'d{i}: begin\n")
+                palette_switch_file.write(f"\tpalette_r={bits_per_component}'d{(red)}\n")
+                palette_switch_file.write(f"\tpalette_g={bits_per_component}'d{(green)}\n")
+                palette_switch_file.write(f"\tpalette_b={bits_per_component}'d{(blue)}\n")
+                palette_switch_file.write("end\n")
 
     # Close palette files
     if palette_coe_file != None:
@@ -113,11 +121,22 @@ def main(args):
 
     # Load pixel data
     bmp.seek(offset)
+    image_bytes = []
+    if bits_per_pixel == 8:
+        for i in range((sprites_x*sprite_size)*(sprites_y*sprite_size)):
+            pixel = struct.unpack('B', bmp.read(1))[0]
+            image_bytes.append(pixel)
+    elif bits_per_pixel == 4:
+        for i in range(int((sprites_x*sprite_size)*(sprites_y*sprite_size)/2)):
+            two_pixels = struct.unpack('B', bmp.read(1))[0]
+            high, low = two_pixels >> 4, two_pixels & 0x0F
+            image_bytes.append(high)
+            image_bytes.append(low)
+    else: # bits_per_pixel == 24
+        pass
 
     # Write to .coe file(s)
-
-
-        
+  
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -131,12 +150,6 @@ if __name__ == '__main__':
                     help='Output image .coe file path')
     
     # --- Optional Args ---
-    # parser.add_argument('-m', '--mode', type=int,
-    #                 help='Set the mode: 0=spritesheet (default), 1=single sprite',
-    #                 choices=[0, 1])
-    # parser.add_argument('-t', '--type', type=int,
-    #                 help='Set the type of bitmap file: 0=RGB (default), 1=palletised',
-    #                 choices=[0, 1])
     parser.add_argument('-c', '--colour_depth', type=int,
                     help='Set the OUTPUT colour depth in bits: 12=4 bits for each of the R,G,B components (default), 24=8 bits for each of the R,G,B components',
                     choices=[12, 24])
