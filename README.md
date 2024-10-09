@@ -1,6 +1,6 @@
 # Spritesheet to .coe file converter
 
-A simple python script for converting a spritesheet (in bitmap form) into .coe files for initialising FPGA memory blocks in the Vivado tools.
+A simple python script for converting a spritesheet (in bitmap form) into .coe files for initialising FPGA memory blocks in the Vivado tools. This script does not require you to install any extra modules. Feel free to contact me if there are any issues.
 
 ## Usecase
 
@@ -14,7 +14,7 @@ For spritesheets, the sprites will be stored sequentially in memory, from left t
 
 The python script should be used by passing in arguments in the command line. For help you can run:
 
-```python
+```sh
 python spritesheet2coe.py -h
 ```
 
