@@ -66,7 +66,12 @@ def main(args):
     # Check image is not compressed
     if compression != 0:
         raise Exception('Image must be uncompressed (compression = 0)')
-    
+
+    # Some extra debug info
+    if args.verbose:
+        print(f"Start of colour table: byte {dib_header_size + 14}")
+        print(f"Start of pixel data: byte {offset}")
+
     # Open palette .coe file
     palette_coe_file = None
     if args.palette_coe != None:
@@ -81,7 +86,7 @@ def main(args):
     # Load Colour Table (if applicable)
     if num_colours == 16 or num_colours == 256:
         bmp.seek(dib_header_size + 14) # Start of colour table is file header size + info header size
-        for i in range(num_colours):
+        for i in range(actual_colours):
             blue = struct.unpack('B', bmp.read(1))[0] # B,G,R,unused
             green = struct.unpack('B', bmp.read(1))[0]
             red = struct.unpack('B', bmp.read(1))[0]
@@ -119,24 +124,94 @@ def main(args):
     if palette_switch_file != None:
         palette_switch_file.close()
 
-    # Load pixel data
+    # Load the entire image into an array, removing padding
     bmp.seek(offset)
     image_bytes = []
     if bits_per_pixel == 8:
-        for i in range((sprites_x*sprite_size)*(sprites_y*sprite_size)):
-            pixel = struct.unpack('B', bmp.read(1))[0]
-            image_bytes.append(pixel)
-    elif bits_per_pixel == 4:
-        for i in range(int((sprites_x*sprite_size)*(sprites_y*sprite_size)/2)):
-            two_pixels = struct.unpack('B', bmp.read(1))[0]
-            high, low = two_pixels >> 4, two_pixels & 0x0F
-            image_bytes.append(high)
-            image_bytes.append(low)
-    else: # bits_per_pixel == 24
-        pass
+        # Calculate linelength and padding bytes
+        scanline_length = image_width # Num pixels in line * 1 byte per pixel
+        line_padding = 4 - (scanline_length % 4)
+        if line_padding == 4:
+            line_padding = 0
 
-    # Write to .coe file(s)
-  
+        # Read bitmap data
+        for y in range(image_height):
+            for x in range(image_width):
+                pixel = struct.unpack('B', bmp.read(1))[0] # Read 1 byte
+                image_bytes.append(pixel)
+
+                if args.verbose:
+                    print(f"{pixel:02x}")
+
+            if args.verbose:
+                print(f"newline, padding={line_padding}")
+            if line_padding != 0:
+                bmp.read(line_padding)
+
+    elif bits_per_pixel == 24:
+        # Calculate linelength and padding bytes
+        scanline_length = image_width * 3 # Num pixels in line * 3 bytes per pixel
+        line_padding = 4 - (scanline_length % 4)
+        if line_padding == 4:
+            line_padding = 0
+
+        # Read bitmap data
+        for y in range(image_height):
+            for x in range(image_width):
+                pixel = struct.unpack('B', bmp.read(3))[0] # Read 3 bytes
+                image_bytes.append(pixel)
+
+                if args.verbose:
+                    print(f"{pixel:02x}")
+
+            if args.verbose:
+                print(f"newline, padding={line_padding}")
+            if line_padding != 0:
+                bmp.read(line_padding)
+
+    elif bits_per_pixel == 4:
+        # Calculate linelength and padding bytes
+        scanline_length = math.ceil(image_width / 2)
+        line_padding = 4 - (scanline_length % 4)
+        if line_padding == 4:
+            line_padding = 0
+
+        # Read bitmap data
+        for y in range(image_height):
+            for x in range(scanline_length):
+                two_pixels = struct.unpack('B', bmp.read(1))[0] # Read 1 byte
+
+                if args.verbose:
+                    print(f"{two_pixels:02x}")
+
+                high, low = two_pixels >> 4, two_pixels & 0x0F # Split into 2 nibbles
+                image_bytes.append(high)
+                if (x == scanline_length - 1) and (math.floor(image_width/2) != scanline_length):
+                    pass # This is the last byte on the line AND there is an odd number of bytes per line
+                else:
+                    image_bytes.append(low)
+            
+            if args.verbose:
+                print(f"newline, padding={line_padding}")
+            if line_padding != 0:
+                bmp.read(line_padding)
+    else:
+        pass # IDK how to decode this
+    
+
+    # Write to .coe file(s), sprite by sprite
+    sprites = open(args.output_image, 'w')
+    sprites.write("memory_initialization_radix=16;\nmemory_initialization_vector=")
+    for sprite_x in range(sprites_x):
+        for sprite_y in range(sprites_y):
+            top_left_pixel = sprite_x * sprite_size + sprite_y * sprites_y * sprite_size
+            for pix_y in range(sprite_size):
+                for pix_x in range(sprite_size):
+                    pixel = top_left_pixel + pix_x + pix_y * sprites_y * sprite_size
+                    sprites.write(format(image_bytes[pixel],'x'))
+                    sprites.write(" ")
+
+    sprites.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
