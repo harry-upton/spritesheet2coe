@@ -69,6 +69,8 @@ def main(args):
 
     # Some extra debug info
     if args.verbose:
+        print(f"Spritesheet dimensions: {image_width}x{image_height}")
+        print(f"Actual colours: {actual_colours}")
         print(f"Start of colour table: byte {dib_header_size + 14}")
         print(f"Start of pixel data: byte {offset}")
 
@@ -196,18 +198,28 @@ def main(args):
             if line_padding != 0:
                 bmp.read(line_padding)
     else:
-        pass # IDK how to decode this
+        raise Exception("Tried to read bitmap with invalid bits_per_pixel number - not implemented!")
     
 
     # Write to .coe file(s), sprite by sprite
+    num_pixels = len(image_bytes)
+    row_width = sprites_x * sprite_size
+    top_left_corner = num_pixels - row_width
+
+    if args.verbose:
+        print(f"Writing coe file: num_pixels={num_pixels}; row_width={row_width}; top_left_corner={top_left_corner}")
+
     sprites = open(args.output_image, 'w')
     sprites.write("memory_initialization_radix=16;\nmemory_initialization_vector=")
-    for sprite_x in range(sprites_x):
-        for sprite_y in range(sprites_y):
-            top_left_pixel = sprite_x * sprite_size + sprite_y * sprites_y * sprite_size
+    for sprite_y in range(sprites_y):
+        for sprite_x in range(sprites_x):
+            top_left_pixel = top_left_corner - row_width * sprite_size * sprite_y + sprite_size * sprite_x
+            if args.verbose:
+                print(f"Writing sprite starting at: {top_left_pixel}")
+
             for pix_y in range(sprite_size):
                 for pix_x in range(sprite_size):
-                    pixel = top_left_pixel + pix_x + pix_y * sprites_y * sprite_size
+                    pixel = top_left_pixel + pix_x - pix_y * row_width
                     sprites.write(format(image_bytes[pixel],'x'))
                     sprites.write(" ")
 
