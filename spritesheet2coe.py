@@ -2,10 +2,18 @@ import struct
 import argparse
 import math
 
+def hex_to_int(hex_input):
+    return int(hex_input, 16)
+
 def main(args):
     # Commandline optional args default values
     if args.colour_depth == None:
         args.colour_depth = 12
+    if args.transparency_colour == None:
+        args.transparency_colour == 0xFF00FF # Magenta is default
+    
+    if args.transparency_colour > 0xFFFFFF or args.transparency_colour < 0x000000:
+        raise Exception("Invalid transparency colour value")
 
     # Open File
     bmp = open(args.input, 'rb')
@@ -247,6 +255,8 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose',
                     help='Enable verbose mode - output full debug info',
                     action='store_true')
-
+    parser.add_argument('-t', '--transparency_colour', type=hex_to_int,
+                    help='Set the colour used as transparency in images.  Default is magenta (0xFF00FF). Input the value in hex. This value will fill any unused colours in the colour palette if one is being used.')
+    
     args = parser.parse_args()
     main(args)
