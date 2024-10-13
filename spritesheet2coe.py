@@ -2,20 +2,21 @@ import struct
 import argparse
 import math
 
+# Helper function for argparse input type
 def hex_to_int(hex_input):
     return int(hex_input, 16)
 
 def main(args):
     # Commandline optional args default values
     if args.colour_depth == None:
-        args.colour_depth = 12
+        args.colour_depth = 12 # 4 bits for each R,G and B
     if args.transparency_colour == None:
         args.transparency_colour = 0xFF00FF # Magenta is default
     
     if args.transparency_colour > 0xFFFFFF or args.transparency_colour < 0x000000:
         raise Exception("Invalid transparency colour value")
 
-    # Separate transparency into 3 component
+    # Separate transparency into 3 components
     transparency_r = (args.transparency_colour >> 16) & 0x0000ff
     transparency_g = (args.transparency_colour >> 8) & 0x0000ff
     transparency_b = (args.transparency_colour) & 0x0000ff
@@ -83,8 +84,10 @@ def main(args):
         print("Warning: Image is palletised but no output file for the palette has been specified. Use the -p or -s flags.")
 
     # Warn if palette output but RGB image:
-    if bits_per_pixel == 24 and (args.palette_coe_file != None or args.palette_switch != None):
+    if bits_per_pixel == 24 and (args.palette_coe != None or args.palette_switch != None):
         print("Warning: Image is RGB (24-bit), but output colour palettes have been specified. These will be ignored.")
+        args.palette_coe = None
+        args.palette_switch = None
 
     # Check image is not compressed
     if compression != 0:
@@ -195,7 +198,17 @@ def main(args):
         # Read bitmap data
         for y in range(image_height):
             for x in range(image_width):
-                pixel = struct.unpack('B', bmp.read(3))[0] # Read 3 bytes
+                blue = struct.unpack('B', bmp.read(1))[0] # B,G,R,unused
+                green = struct.unpack('B', bmp.read(1))[0]
+                red = struct.unpack('B', bmp.read(1))[0]
+                
+                if args.colour_depth == 12:
+                    blue = int(blue / 16)
+                    green = int(green / 16)
+                    red = int(red/16)
+                    pixel = blue + (green << 4) + (red << 8)
+                else:
+                    pixel = blue + (green << 8) + (red << 16)
                 image_bytes.append(pixel)
 
                 if args.verbose:
@@ -255,7 +268,11 @@ def main(args):
             for pix_y in range(sprite_size):
                 for pix_x in range(sprite_size):
                     pixel = top_left_pixel + pix_x - pix_y * row_width
-                    sprites.write(format(image_bytes[pixel],'x'))
+                    if bits_per_pixel == 24 and args.colour_depth == 24:
+                        sprites.write(f"{image_bytes[pixel]:06x}")
+                    else:
+                        sprites.write(f"{image_bytes[pixel]:03x}")
+                    # sprites.write(format(image_bytes[pixel],'x'))
                     sprites.write(" ")
 
     sprites.close()
