@@ -80,7 +80,11 @@ def main(args):
     
     # Warn if palletised image and no palette output
     if (bits_per_pixel == 4 or bits_per_pixel == 8) and (args.palette_coe == None and args.palette_switch == None):
-        print(f"Warning: Image is palletised but no output file for the palette has been specified. Use the -p or -s flags.")
+        print("Warning: Image is palletised but no output file for the palette has been specified. Use the -p or -s flags.")
+
+    # Warn if palette output but RGB image:
+    if bits_per_pixel == 24 and (args.palette_coe_file != None or args.palette_switch != None):
+        print("Warning: Image is RGB (24-bit), but output colour palettes have been specified. These will be ignored.")
 
     # Check image is not compressed
     if compression != 0:
