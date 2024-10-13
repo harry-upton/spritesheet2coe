@@ -8,7 +8,7 @@ This script works for both single sprites and on spritesheets. It works for pall
 
 ## Output format
 
-For spritesheets, the sprites will be stored sequentially in memory, from left to right and top to bottom in the spritesheet. Pixels in the sprites are stored left to right, top to bottom.
+For spritesheets, the sprites will be stored sequentially in memory, from left to right and top to bottom in the spritesheet. Pixels in the sprites are stored left to right, top to bottom. For example, if a spritesheet contains 8x8 sprites, the first 64 values in memory will correspond to the first sprite, the next 64 values will correspond to the second sprite, etc.
 
 ## Instructions for use
 
