@@ -180,9 +180,6 @@ def main(args):
                 pixel = struct.unpack('B', bmp.read(1))[0] # Read 1 byte
                 image_bytes.append(pixel)
 
-                if args.verbose:
-                    print(f"{pixel:02x}")
-
             if args.verbose:
                 print(f"newline, padding={line_padding}")
             if line_padding != 0:
@@ -211,9 +208,6 @@ def main(args):
                     pixel = blue + (green << 8) + (red << 16)
                 image_bytes.append(pixel)
 
-                if args.verbose:
-                    print(f"{pixel:02x}")
-
             if args.verbose:
                 print(f"newline, padding={line_padding}")
             if line_padding != 0:
@@ -230,9 +224,6 @@ def main(args):
         for y in range(image_height):
             for x in range(scanline_length):
                 two_pixels = struct.unpack('B', bmp.read(1))[0] # Read 1 byte
-
-                if args.verbose:
-                    print(f"{two_pixels:02x}")
 
                 high, low = two_pixels >> 4, two_pixels & 0x0F # Split into 2 nibbles
                 image_bytes.append(high)
