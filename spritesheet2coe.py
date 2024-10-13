@@ -10,10 +10,21 @@ def main(args):
     if args.colour_depth == None:
         args.colour_depth = 12
     if args.transparency_colour == None:
-        args.transparency_colour == 0xFF00FF # Magenta is default
+        args.transparency_colour = 0xFF00FF # Magenta is default
     
     if args.transparency_colour > 0xFFFFFF or args.transparency_colour < 0x000000:
         raise Exception("Invalid transparency colour value")
+
+    # Separate transparency into 3 component
+    transparency_r = (args.transparency_colour >> 16) & 0x0000ff
+    transparency_g = (args.transparency_colour >> 8) & 0x0000ff
+    transparency_b = (args.transparency_colour) & 0x0000ff
+
+    # Make transparency colour 4 bit if necessary:
+    if args.colour_depth == 12:
+        transparency_r = int(transparency_r/16)
+        transparency_g = int(transparency_g/16)
+        transparency_b = int(transparency_b/16)
 
     # Open File
     bmp = open(args.input, 'rb')
@@ -127,11 +138,23 @@ def main(args):
                 palette_switch_file.write(f"\tpalette_b={bits_per_component}'d{(blue)}\n")
                 palette_switch_file.write("end\n")
 
-    # Close palette files
+    # Add final colours, close palette files
+    remaining_colours = num_colours - actual_colours
     if palette_coe_file != None:
+        for i in range(remaining_colours):
+            palette_coe_file.write(format(transparency_r,'x'))
+            palette_coe_file.write(format(transparency_g,'x'))
+            palette_coe_file.write(format(transparency_b,'x'))
+            palette_coe_file.write(" ")
         palette_coe_file.close()
 
     if palette_switch_file != None:
+        bits_per_component = int(args.colour_depth/3)
+        palette_switch_file.write("default: begin\n")
+        palette_switch_file.write(f"\tpalette_r={bits_per_component}'d{(transparency_r)}\n")
+        palette_switch_file.write(f"\tpalette_g={bits_per_component}'d{(transparency_g)}\n")
+        palette_switch_file.write(f"\tpalette_b={bits_per_component}'d{(transparency_b)}\n")
+        palette_switch_file.write("end\n")
         palette_switch_file.close()
 
     # Load the entire image into an array, removing padding
@@ -256,7 +279,7 @@ if __name__ == '__main__':
                     help='Enable verbose mode - output full debug info',
                     action='store_true')
     parser.add_argument('-t', '--transparency_colour', type=hex_to_int,
-                    help='Set the colour used as transparency in images.  Default is magenta (0xFF00FF). Input the value in hex. This value will fill any unused colours in the colour palette if one is being used.')
+                    help='Set the colour used as transparency in sprites.  Default is magenta (0xFF00FF). Input the value as a 6 digit hex. This value will fill any unused colours in the colour palette if one is being used.')
     
     args = parser.parse_args()
     main(args)
